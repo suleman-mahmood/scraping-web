@@ -7,7 +7,8 @@ import { BrowserName, Dataset, DeviceCategory, OperatingSystemsName, PlaywrightC
 // So we need 100 scrapers to run for 1 hour to get all the data with duplication
 // Start points in intervals of 100, 3.2 million / 100 = 32k
 
-const BASEL_URL = 'https://www.crunchbase.com/search/organization.companies/88dfccdbbba953493e8754668e3485ce';
+// const BASEL_URL = 'https://www.crunchbase.com';
+const BASEL_URL = 'https://www.crunchbase.com/search/organization.companies';
 
 const DEBUG_RUN = true;
 
@@ -16,7 +17,13 @@ const ROWS_TO_SCRAPE = DEBUG_RUN ? 320 : 32000;
 const ROWS_IN_ONE_PAGE = 15;
 
 const crawler = new PlaywrightCrawler({
-    async requestHandler({ request, page, enqueueLinks, log, pushData }) {
+    async requestHandler({ request, page, pushData }) {
+        // await page.waitForTimeout(1000 * 30);
+
+        await page.click('button.add-filter-button');
+        await page.fill('input.mat-mdc-input-element', 'rank');
+        await page.locator('button.mdc-list-item').nth(1).click();
+
         let nextRank = request.label?.split('-')[1] ?? '0';
 
         for await (const i of [...Array(Math.ceil(ROWS_TO_SCRAPE / ROWS_IN_ONE_PAGE)).keys()]) {
@@ -64,7 +71,10 @@ const crawler = new PlaywrightCrawler({
     headless: false,
     requestHandlerTimeoutSecs: 60 * 10, // 10 mins
     maxRequestRetries: 0,
-    maxConcurrency: 1,
+    maxConcurrency: 3,
+    sessionPoolOptions: {
+        blockedStatusCodes: [],
+    }
 
     // maxConcurrency: 5,
     // useSessionPool: true,
@@ -93,9 +103,9 @@ const crawler = new PlaywrightCrawler({
     //         // "http://50.218.57.71:80",
     //         // "http://198.176.56.43:80",
     //         // "http://51.159.0.236:2020",
-    //         "http://156.244.64.160:40183",
-    //         "http://103.168.155.116:80",
-    //         "http://207.2.120.15:80",
+    //         // "http://156.244.64.160:40183",
+    //         // "http://103.168.155.116:80",
+    //         // "http://207.2.120.15:80",
     //         // "http://50.237.207.186:80",
     //         // "http://195.114.209.50:80",
     //         // "http://154.65.39.7:80",
