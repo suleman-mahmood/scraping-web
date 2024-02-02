@@ -7,13 +7,24 @@ import { BrowserName, Dataset, DeviceCategory, OperatingSystemsName, PlaywrightC
 // So we need 100 scrapers to run for 1 hour to get all the data with duplication
 // Start points in intervals of 100, 3.2 million / 100 = 32k
 
+/* 
+Config:
+    - Parallel requests = 3
+    - Total rows to scrape = 18000
+    - Rows in one request = 6000
+
+    Total time = 440 secs = 7.3 mins
+    Time for 3.2 million rows = 3.2 million / 18000 * 440 = 7.3 * 177.7 = 1298.71 mins = 21.6 hours
+*/
+
 // const BASEL_URL = 'https://www.crunchbase.com';
 const BASEL_URL = 'https://www.crunchbase.com/search/organization.companies';
 
 const DEBUG_RUN = true;
 
-const TOTAL_REQUESTS = DEBUG_RUN ? 1 : 100;
-const ROWS_TO_SCRAPE = DEBUG_RUN ? 320 : 32000;
+const START_OFFSET = 0;
+const TOTAL_REQUESTS = DEBUG_RUN ? 3 : 100;
+const ROWS_TO_SCRAPE = DEBUG_RUN ? 6000 : 32000;
 const ROWS_IN_ONE_PAGE = 15;
 
 const crawler = new PlaywrightCrawler({
@@ -69,12 +80,29 @@ const crawler = new PlaywrightCrawler({
         }
     },
     headless: false,
+
     requestHandlerTimeoutSecs: 60 * 10, // 10 mins
     maxRequestRetries: 0,
+    
+    minConcurrency: 1,
     maxConcurrency: 3,
+
+    useSessionPool: true,
     sessionPoolOptions: {
         blockedStatusCodes: [],
-    }
+        maxPoolSize: 3,
+        sessionOptions: {
+            maxUsageCount: 1,
+        }    
+    },
+    autoscaledPoolOptions: {
+        desiredConcurrency: 1,
+    },
+
+    browserPoolOptions: {
+        maxOpenPagesPerBrowser: 1,
+        retireBrowserAfterPageCount: 1,
+    },
 
     // maxConcurrency: 5,
     // useSessionPool: true,
@@ -133,7 +161,7 @@ const crawler = new PlaywrightCrawler({
 
 const allRequests = [];
 
-for (const i of [...Array(TOTAL_REQUESTS).keys()]) {
+for (const i of [...Array(START_OFFSET + TOTAL_REQUESTS).keys()]) {
     const startPoint = i * ROWS_TO_SCRAPE;
     const label = `initial-${startPoint}`;
 
