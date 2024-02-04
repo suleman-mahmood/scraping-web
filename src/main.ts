@@ -1,5 +1,7 @@
 import { Dataset, Log, PlaywrightCrawler, Source } from 'crawlee';
 import { Page } from 'playwright';
+import { chromium } from 'playwright-extra';
+import stealthPlugin from 'puppeteer-extra-plugin-stealth';
 
 // 3.2 million companies
 // 10k rows in 10 mins
@@ -19,6 +21,8 @@ Config:
 
     13 failures with 12 requests per minute for 100 requests and done in 19 mins
 */
+
+/* Config */
 
 const BASEL_URL = 'https://www.crunchbase.com';
 const SEARCH_URL = `${BASEL_URL}/search/organization.companies`;
@@ -42,6 +46,8 @@ enum LocatorType {
 }
 
 const runId = Math.floor(Math.random() * 1000) + 1
+
+/* Opening datasets */
 
 const searchDataset = await Dataset.open(`${runId}-search-results`);
 const orgDataset = await Dataset.open(`${runId}-org-results`);
@@ -140,6 +146,9 @@ const possiblySolveCaptcha = async (
         }
     }
 }
+
+/* Setting up our browser */
+chromium.use(stealthPlugin());
 
 const crawler = new PlaywrightCrawler({
     async requestHandler({ request, page, log }) {
@@ -255,10 +264,20 @@ const crawler = new PlaywrightCrawler({
                 results["people"].push(text);
             }
 
+            results['docText'] = await page.innerText('html');
+
             orgDataset.pushData(results);
         }
     },
+
     headless: false,
+    // launchContext: {
+    //     launcher: chromium,
+    //     useIncognitoPages: true,
+    //     launchOptions: {
+    //         headless: false,
+    //     },
+    // },
 
     requestHandlerTimeoutSecs: 60 * 10, // 10 mins
     maxRequestRetries: 5,
@@ -281,7 +300,7 @@ const crawler = new PlaywrightCrawler({
         retireBrowserAfterPageCount: 1,
     },
 
-    maxRequestsPerMinute: 6,
+    maxRequestsPerMinute: 3,
 });
 
 const allRequests: Source[] = [];
